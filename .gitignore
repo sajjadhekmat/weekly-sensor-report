@@ -1,0 +1,12 @@
+# Ignore credentials and API keys
+credentials.json
+.env
+*.env
+n8n_config/
+n8n_creds/
+workflow_creds.json
+
+# Ignore local/system files
+.DS_Store
+node_modules/
+__pycache__/

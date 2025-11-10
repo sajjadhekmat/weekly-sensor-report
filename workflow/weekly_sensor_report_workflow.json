@@ -1,0 +1,242 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "c267747c-5078-47fa-a182-0c29d133e874",
+      "name": "Cron Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.thingspeak.com/channels/3132076/feeds.json?api_key=YOUR_API_KEY&days=7",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        592,
+        176
+      ],
+      "id": "a214d051-a2eb-4845-974d-90f2bfc931ec",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the ThingSpeak JSON data\nconst feeds = $json[\"feeds\"];\n\n// If no data, stop\nif (!feeds || feeds.length === 0) {\n  return [];\n}\n\n// Clean and organize the data\nconst cleanedData = feeds.map(feed => ({\n  timestamp: feed.created_at,\n  temperature: parseFloat(feed.field1),\n  inclination_x: parseFloat(feed.field3),\n  inclination_y: parseFloat(feed.field4)\n})).filter(entry =>\n  !isNaN(entry.temperature) &&\n  !isNaN(entry.inclination_x) &&\n  !isNaN(entry.inclination_y)\n);\n\n// Return the cleaned data\nreturn [{ json: { cleanedData } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        176
+      ],
+      "id": "95af2b6e-d4b1-4ae4-9a5b-7ddc68635bf0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "function calcStats(values) {\n  const valid = values.filter(v => !isNaN(v));\n  const min = Math.min(...valid);\n  const max = Math.max(...valid);\n  const avg = valid.reduce((a, b) => a + b, 0) / valid.length;\n  return { min, max, avg };\n}\n\nconst d = items[0].json.cleanedData;\n\n// Separate arrays for each variable\nconst temps = d.map(x => x.temperature);\nconst inclX = d.map(x => x.inclination_x);\nconst inclY = d.map(x => x.inclination_y);\n\nreturn [{\n  json: {\n    cleanedData: d,\n    stats: {\n      temperature: calcStats(temps),\n      inclinationX: calcStats(inclX),\n      inclinationY: calcStats(inclY)\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        176
+      ],
+      "id": "882e6cc6-4f32-4d7b-8bef-5f295d5cde7c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a structural health monitoring analyst. You receive JSON data containing temperature (°C), inclination_x (°), and inclination_y (°) for the last 7 days from a small structure. Your task is to analyze the data and write a clear, structured weekly report. Follow this structure exactly: 1) Summary (5–8 lines) - Period analyzed (use timestamps in the data) - Typical temperature range - Typical inclination X/Y ranges - One or two key conclusions about sensor and structure behavior 2) Sensor Information & Data Window - Describe each variable and its unit - Show the time window (start to end) - Indicate number of samples 3) Weekly Behaviour of the Data - For Temperature, Inclination X, and Inclination Y: - Minimum, Maximum, and Average - Short notes about: - Stability or drift - Any jumps or missing data - Daily patterns if visible - Include a small table with min, max, and mean 4) Relation Between Temperature and Inclination - Qualitative description of how inclination changes with temperature - Mention if a simple linear relationship seems plausible 5) Sensor State / Recommendations - Comment on whether the sensor behaves normally - Any signs of malfunction or abnormal structure behavior - One or two simple recommendations (e.g., continue monitoring, recalibrate) Input JSON data to analyze:\n{{ $json.reportInput }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "=You are a structural health monitoring analyst. You receive JSON data containing temperature (°C), inclination_x (°), and inclination_y (°) for the last 7 days from a small structure. Your task is to analyze the data and write a clear, structured weekly report. Follow this structure exactly: 1) Summary (5–8 lines) - Period analyzed (use timestamps in the data) - Typical temperature range - Typical inclination X/Y ranges - One or two key conclusions about sensor and structure behavior 2) Sensor Information & Data Window - Describe each variable and its unit - Show the time window (start to end) - Indicate number of samples 3) Weekly Behaviour of the Data - For Temperature, Inclination X, and Inclination Y: - Minimum, Maximum, and Average - Short notes about: - Stability or drift - Any jumps or missing data - Daily patterns if visible - Include a small table with min, max, and mean 4) Relation Between Temperature and Inclination - Qualitative description of how inclination changes with temperature - Mention if a simple linear relationship seems plausible 5) Sensor State / Recommendations - Comment on whether the sensor behaves normally - Any signs of malfunction or abnormal structure behavior - One or two simple recommendations (e.g., continue monitoring, recalibrate) Input JSON data to analyze:\n{{ $json.reportInput }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1424,
+        176
+      ],
+      "id": "d99e3246-5136-4b02-bbd6-64080a23b2cb",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        384
+      ],
+      "id": "a943e60c-e3e0-46e7-907f-f34ae0df6fe4",
+      "name": "OpenRouter Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Take data from previous node\nconst data = items[0].json;\n\n// Convert JSON arrays to readable string\nconst dataText = JSON.stringify(data.cleanedData, null, 2);\n\n// Keep stats if needed\nconst stats = data.stats;\n\n// Return for LLM\nreturn [{\n  json: {\n    reportInput: dataText,\n    stats\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        176
+      ],
+      "id": "eda85f12-67b6-443a-8b41-ef3f49825dc1",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "sendTo": "sajjad.hekmat1995@gmail.com",
+        "subject": "Weekly Sensor Report",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1776,
+        176
+      ],
+      "id": "43a40b36-4abe-44b0-aea3-041cc0e279b2",
+      "name": "Send a message"
+    }
+  ],
+  "pinData": {
+    "Cron Schedule": [
+      {
+        "json": {
+          "timestamp": "2025-11-04T16:09:17.998+01:00",
+          "Readable date": "November 4th 2025, 4:09:17 pm",
+          "Readable time": "4:09:17 pm",
+          "Day of week": "Tuesday",
+          "Year": "2025",
+          "Month": "November",
+          "Day of month": "04",
+          "Hour": "16",
+          "Minute": "09",
+          "Second": "17",
+          "Timezone": "Europe/Paris (UTC+01:00)"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Cron Schedule": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f8b36dc7-60c8-44bc-b0de-2a83f5fdfa46",
+  "meta": {
+    "instanceId": "e6016a97f1420762b680d01e5f3b1c136d5fb8cee14d731b6ef1b8f86f2719af"
+  },
+  "id": "8kXZ6dLQISIvQW3g",
+  "tags": []
+}
