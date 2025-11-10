@@ -61,7 +61,7 @@ Before running this project, ensure you have:
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/yourusername/weekly-sensor-monitoring.git
+git clone https://github.com/sajjadhekmat/weekly-sensor-report.git
 cd weekly-sensor-monitoring
 ```
 
